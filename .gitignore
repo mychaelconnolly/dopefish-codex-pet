@@ -1,0 +1,16 @@
+.DS_Store
+__pycache__/
+*.pyc
+
+.agent-continuity/
+
+build/
+exact-run/
+run/
+
+source/*.gif
+source/*.png
+
+source/local-refs/*-frame-*.png
+source/local-refs/*-reference-strip.png
+source/local-refs/dopefish-*-palette.png
