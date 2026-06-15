@@ -438,7 +438,7 @@ def main() -> None:
     request = {
         "pet_id": "dopefish",
         "display_name": "Dopefish",
-        "description": "A calm source-pixel Dopefish pet built from supplied sprite references.",
+        "description": "The second-dumbest creature in the universe",
         "source_assets": [
             str(SWIM_GIF),
             str(BURP_GIF),
