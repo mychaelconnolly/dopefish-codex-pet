@@ -3,7 +3,7 @@
 The second-dumbest creature in the universe can now be your Codex pet. Made with
 love. Suggestions welcome.
 
-![Dopefish contact sheet](docs/contact-sheet.png)
+![Dopefish](https://keenwiki.shikadi.net/i/1/1b/Dopefish.png)
 
 ## Install
 
@@ -20,6 +20,10 @@ cp pets/dopefish/pet.json pets/dopefish/spritesheet.webp "$HOME/.codex/pets/dope
 
 Then open Codex, go to **Settings > Appearance > Pets**, and refresh custom pets
 from your local Codex home.
+
+## Sprite Sheet
+
+![Dopefish Codex pet sprite sheet](docs/contact-sheet.png)
 
 ## What This Is
 
