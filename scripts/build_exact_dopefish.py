@@ -13,11 +13,10 @@ from PIL import Image, ImageOps, ImageSequence
 ROOT = Path(__file__).resolve().parents[1]
 RUN = ROOT / "build"
 SWIM_GIF = ROOT / "source/local-refs/swimfish2.gif"
-BURP_GIF = ROOT / "source/local-refs/burpfish.gif"
-CHOMP_FULL_GIF = ROOT / "source/local-refs/chomp-full-animation.gif"
 CHOMP_STILL_GIF = ROOT / "source/local-refs/chomp-still.gif"
+CHOMP_FULL_GIF = ROOT / "source/local-refs/chomp-full-animation.gif"
 EXTRA_SHEET = ROOT / "source/local-refs/more-sprites-dopefish.png"
-BUILD_ID = "exact-source-nearest-neighbor-scale-v8-running-waiting-chomp"
+BUILD_ID = "exact-source-nearest-neighbor-scale-v13-left-running-full-chomp-experiment"
 
 CELL_WIDTH = 192
 CELL_HEIGHT = 208
@@ -59,7 +58,6 @@ EXTRA_SPRITE_BOXES = {
     "attack_ready": (36, 152, 112, 216),
     "charge": (35, 217, 121, 281),
     "charging": (30, 291, 118, 369),
-    "burp_spare": (154, 297, 234, 369),
 }
 BUBBLE_BOXES = {
     "cyan": (122, 137, 137, 152),
@@ -188,10 +186,21 @@ def make_sheet_cell(
     return make_cell(source, flip=flip, offset=offset, scale=scale, overlays=overlays)
 
 
+def make_left_cell(
+    source: Image.Image,
+    *,
+    offset: tuple[int, int] = (0, 0),
+    scale: float = SCALE,
+    overlays: list[tuple[Image.Image, tuple[int, int], float]] | None = None,
+) -> Image.Image:
+    return make_cell(source, flip=True, offset=offset, scale=scale, overlays=overlays)
+
+
 def make_rotated_cell(
     source: Image.Image,
     *,
     angle: float,
+    flip: bool = False,
     offset: tuple[int, int] = (0, 0),
     scale: float = 1.8,
 ) -> Image.Image:
@@ -200,12 +209,15 @@ def make_rotated_cell(
         (round(sprite.width * scale), round(sprite.height * scale)),
         Image.Resampling.NEAREST,
     )
+    if flip:
+        sprite = ImageOps.mirror(sprite)
     sprite = sprite.rotate(
         angle,
         resample=Image.Resampling.NEAREST,
         expand=True,
         fillcolor=(0, 0, 0, 0),
     )
+    sprite = visible_crop(sprite)
 
     cell = Image.new("RGBA", (CELL_WIDTH, CELL_HEIGHT), (0, 0, 0, 0))
     left = (CELL_WIDTH - sprite.width) // 2 + offset[0]
@@ -295,119 +307,118 @@ def main() -> None:
         (RUN / dirname).mkdir(parents=True, exist_ok=True)
 
     swim = load_frames(SWIM_GIF)
-    burp = load_frames(BURP_GIF)
-    chomp_full = load_frames(CHOMP_FULL_GIF)
     chomp_still = load_frames(CHOMP_STILL_GIF)
+    chomp_full = load_frames(CHOMP_FULL_GIF)
     load_extra_sprites()
-    if len(swim) < 2 or len(burp) < 2 or not chomp_full or not chomp_still:
-        raise SystemExit("expected swim, burp, and chomp GIF frames")
+    if len(swim) < 2 or not chomp_still or len(chomp_full) < 8:
+        raise SystemExit("expected swim, still chomp, and full chomp GIF frames")
 
     write_frames(
         "idle",
         [
-            make_cell(swim[0], offset=(-2, 0)),
-            make_cell(swim[1], offset=(-1, 1)),
-            make_cell(swim[0], offset=(0, 0)),
-            make_cell(swim[1], flip=True, offset=(1, 1)),
-            make_cell(swim[0], flip=True, offset=(0, 0)),
-            make_cell(swim[1], offset=(-1, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
         ],
     )
     write_frames(
         "running-right",
         [
-            make_cell(swim[0], offset=(0, 0)),
-            make_cell(swim[1], offset=(0, 1)),
-            make_cell(swim[0], offset=(1, 0)),
-            make_cell(swim[1], offset=(0, -1)),
-            make_cell(swim[0], offset=(0, 0)),
-            make_cell(swim[1], offset=(-1, 1)),
-            make_cell(swim[0], offset=(0, 0)),
-            make_cell(swim[1], offset=(0, -1)),
+            make_left_cell(chomp_full[0], offset=(0, 0), scale=1.0),
+            make_left_cell(chomp_full[1], offset=(0, 1), scale=1.0),
+            make_left_cell(chomp_full[0], offset=(0, 0), scale=1.0),
+            make_left_cell(chomp_full[1], offset=(0, -1), scale=1.0),
+            make_left_cell(chomp_full[7], offset=(0, 0), scale=1.0),
+            make_left_cell(chomp_full[1], offset=(0, 1), scale=1.0),
+            make_left_cell(chomp_full[0], offset=(0, 0), scale=1.0),
+            make_left_cell(chomp_full[7], offset=(0, -1), scale=1.0),
         ],
     )
     write_frames(
         "running-left",
         [
-            make_cell(swim[0], flip=True, offset=(0, 0)),
-            make_cell(swim[1], flip=True, offset=(0, 1)),
-            make_cell(swim[0], flip=True, offset=(1, 0)),
-            make_cell(swim[1], flip=True, offset=(0, -1)),
-            make_cell(swim[0], flip=True, offset=(0, 0)),
-            make_cell(swim[1], flip=True, offset=(-1, 1)),
-            make_cell(swim[0], flip=True, offset=(0, 0)),
-            make_cell(swim[1], flip=True, offset=(0, -1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, -1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, -1)),
         ],
     )
     write_frames(
         "waving",
         [
-            make_cell(swim[0], offset=(-4, 0)),
-            make_cell(burp[0], offset=(0, 0)),
-            make_cell(burp[1], offset=(0, 0)),
-            make_cell(swim[1], offset=(-3, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
         ],
     )
     write_frames(
         "jumping",
         [
-            make_cell(swim[0], offset=(0, 18)),
-            make_cell(swim[1], offset=(0, 0)),
-            make_cell(swim[0], offset=(0, -28)),
-            make_cell(swim[1], offset=(0, -10)),
-            make_cell(swim[0], offset=(0, 12)),
+            make_left_cell(swim[0], offset=(0, 18)),
+            make_left_cell(swim[1], offset=(0, 0)),
+            make_left_cell(swim[0], offset=(0, -28)),
+            make_left_cell(swim[1], offset=(0, -10)),
+            make_left_cell(swim[0], offset=(0, 12)),
         ],
     )
     write_frames(
         "failed",
         [
-            make_rotated_cell(swim[0], angle=0, offset=(0, 0)),
-            make_rotated_cell(swim[1], angle=-30, offset=(0, 0)),
-            make_rotated_cell(swim[0], angle=-60, offset=(0, 0)),
-            make_rotated_cell(swim[1], angle=-90, offset=(0, 0)),
-            make_rotated_cell(swim[0], angle=-120, offset=(0, 0)),
-            make_rotated_cell(swim[1], angle=-150, offset=(0, 2)),
-            make_rotated_cell(swim[0], angle=-180, offset=(0, 6)),
-            make_rotated_cell(swim[0], angle=-180, offset=(0, 10)),
+            make_rotated_cell(swim[0], flip=True, angle=0, offset=(0, 0)),
+            make_rotated_cell(swim[1], flip=True, angle=-30, offset=(0, 0)),
+            make_rotated_cell(swim[0], flip=True, angle=-60, offset=(0, 0)),
+            make_rotated_cell(swim[1], flip=True, angle=-90, offset=(0, 0)),
+            make_rotated_cell(swim[0], flip=True, angle=-120, offset=(0, 0)),
+            make_rotated_cell(swim[1], flip=True, angle=-150, offset=(0, 2)),
+            make_rotated_cell(swim[0], flip=True, angle=-180, offset=(0, 6)),
+            make_rotated_cell(swim[0], flip=True, angle=-180, offset=(0, 10)),
         ],
     )
     write_frames(
         "waiting",
         [
-            make_cell(swim[0], offset=(0, 0)),
-            make_cell(chomp_still[0], offset=(0, 0)),
-            make_cell(burp[0], offset=(0, 0)),
-            make_cell(burp[1], offset=(0, 0)),
-            make_cell(burp[0], offset=(0, 0)),
-            make_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[0], offset=(0, 2)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 0)),
+            make_left_cell(swim[0], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 1)),
         ],
     )
     write_frames(
         "running",
         [
-            make_cell(swim[0], offset=(-2, 0)),
-            make_cell(swim[1], offset=(-1, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
             make_cell(chomp_still[0], offset=(0, 0)),
-            make_cell(burp[0], offset=(0, 0)),
-            make_cell(swim[1], flip=True, offset=(1, 1)),
-            make_cell(swim[0], flip=True, offset=(0, 0)),
+            make_left_cell(chomp_full[7], offset=(0, 0), scale=1.0),
+            make_cell(chomp_still[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
         ],
     )
     write_frames(
         "review",
         [
-            make_cell(swim[0], offset=(-2, 0)),
-            make_cell(swim[1], offset=(-1, 1)),
-            make_cell(swim[0], offset=(0, 0)),
-            make_cell(swim[1], flip=True, offset=(1, 1)),
-            make_cell(swim[0], flip=True, offset=(0, 0)),
-            make_cell(swim[1], offset=(-1, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0)),
+            make_left_cell(swim[1], offset=(0, 1)),
         ],
     )
 
     allowed_palette = {
         tuple(color)
-        for color in collect_visible_palette([SWIM_GIF, BURP_GIF, CHOMP_FULL_GIF, CHOMP_STILL_GIF])
+        for color in collect_visible_palette([SWIM_GIF, CHOMP_STILL_GIF, CHOMP_FULL_GIF])
     }
     assert_palette(RUN / "frames", allowed_palette)
 
@@ -415,9 +426,8 @@ def main() -> None:
         "ok": True,
         "source_assets": [
             str(SWIM_GIF),
-            str(BURP_GIF),
-            str(CHOMP_FULL_GIF),
             str(CHOMP_STILL_GIF),
+            str(CHOMP_FULL_GIF),
             str(EXTRA_SHEET),
         ],
         "scale": SCALE,
@@ -441,9 +451,8 @@ def main() -> None:
         "description": "The second-dumbest creature in the universe",
         "source_assets": [
             str(SWIM_GIF),
-            str(BURP_GIF),
-            str(CHOMP_FULL_GIF),
             str(CHOMP_STILL_GIF),
+            str(CHOMP_FULL_GIF),
             str(EXTRA_SHEET),
         ],
         "atlas": {

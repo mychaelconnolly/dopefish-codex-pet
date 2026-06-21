@@ -3,15 +3,15 @@
 The second-dumbest creature in the universe can now be your Codex pet. Made with
 love. Suggestions welcome.
 
-![Dopefish](https://keenwiki.shikadi.net/i/1/1b/Dopefish.png)
+![Dopefish v13 left-facing chomp thumbnail](docs/thumbnail.png)
 
 ## Install
 
-After this repository is published at `mychaelconnolly/dopefish-codex-pet`, use:
+Use the published package from `mychaelconnolly/dopefish-codex-pet`:
 
 [Install Dopefish in Codex](codex://pets/install?name=Dopefish&imageUrl=https%3A%2F%2Fraw.githubusercontent.com%2Fmychaelconnolly%2Fdopefish-codex-pet%2Fmain%2Fpets%2Fdopefish%2Fspritesheet.webp&description=The%20second-dumbest%20creature%20in%20the%20universe)
 
-Manual install:
+Manual install from this checkout, useful while testing the local v13 build:
 
 ```bash
 mkdir -p "$HOME/.codex/pets/dopefish"
@@ -37,7 +37,9 @@ Project details:
   `imageUrl`, and optional `description` parameters.
 - Supports local manual install through the Codex home pet directory.
 - Keeps the source-pixel style: nearest-neighbor scaling and hard sprite edges.
-- Includes chomp-then-burp accents in the `waiting` and `running` states.
+- Includes a chomp-heavy v13 experiment: `running-right` is repurposed as an
+  8-frame left-facing chomp row, while `running` holds the chomp for three
+  frames.
 - Includes QA artifacts for review: `docs/contact-sheet.png` and
   `docs/previews/*.gif`.
 
@@ -70,13 +72,13 @@ format: WebP with transparency
 Current build:
 
 ```text
-exact-source-nearest-neighbor-scale-v8-running-waiting-chomp
+exact-source-nearest-neighbor-scale-v13-left-running-full-chomp-experiment
 ```
 
 Current `spritesheet.webp` SHA-256:
 
 ```text
-6cbfdc7ced63fb72b4611f4e8ccfc44c6b936691ba1e20f88326453b306cc56e
+4196b447fa46da64e9c45eb1a736f571c1206b1147e644aaddbef595fc25e337
 ```
 
 ## Process Notes
