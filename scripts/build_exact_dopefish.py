@@ -16,7 +16,7 @@ SWIM_GIF = ROOT / "source/local-refs/swimfish2.gif"
 CHOMP_STILL_GIF = ROOT / "source/local-refs/chomp-still.gif"
 CHOMP_FULL_GIF = ROOT / "source/local-refs/chomp-full-animation.gif"
 EXTRA_SHEET = ROOT / "source/local-refs/more-sprites-dopefish.png"
-BUILD_ID = "exact-source-nearest-neighbor-scale-v13-left-running-full-chomp-experiment"
+BUILD_ID = "dopefish-v0.13.0"
 
 CELL_WIDTH = 192
 CELL_HEIGHT = 208

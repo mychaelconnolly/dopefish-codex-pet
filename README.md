@@ -3,7 +3,7 @@
 The second-dumbest creature in the universe can now be your Codex pet. Made with
 love. Suggestions welcome.
 
-![Dopefish v13 left-facing chomp thumbnail](docs/thumbnail.png)
+![Dopefish v0.13.0 thumbnail](docs/thumbnail.png)
 
 ## Install
 
@@ -11,7 +11,8 @@ Use the published package from `mychaelconnolly/dopefish-codex-pet`:
 
 [Install Dopefish in Codex](codex://pets/install?name=Dopefish&imageUrl=https%3A%2F%2Fraw.githubusercontent.com%2Fmychaelconnolly%2Fdopefish-codex-pet%2Fmain%2Fpets%2Fdopefish%2Fspritesheet.webp&description=The%20second-dumbest%20creature%20in%20the%20universe)
 
-Manual install from this checkout, useful while testing the local v13 build:
+Manual install from this checkout, useful while testing the local
+`dopefish-v0.13.0` build:
 
 ```bash
 mkdir -p "$HOME/.codex/pets/dopefish"
@@ -37,9 +38,9 @@ Project details:
   `imageUrl`, and optional `description` parameters.
 - Supports local manual install through the Codex home pet directory.
 - Keeps the source-pixel style: nearest-neighbor scaling and hard sprite edges.
-- Includes a chomp-heavy v13 experiment: `running-right` is repurposed as an
-  8-frame left-facing chomp row, while `running` holds the chomp for three
-  frames.
+- Includes the chomp-heavy `dopefish-v0.13.0` build: `running-right` is
+  repurposed as an 8-frame left-facing chomp row, while `running` holds the
+  chomp for three frames.
 - Includes QA artifacts for review: `docs/contact-sheet.png` and
   `docs/previews/*.gif`.
 
@@ -72,7 +73,7 @@ format: WebP with transparency
 Current build:
 
 ```text
-exact-source-nearest-neighbor-scale-v13-left-running-full-chomp-experiment
+dopefish-v0.13.0
 ```
 
 Current `spritesheet.webp` SHA-256:
