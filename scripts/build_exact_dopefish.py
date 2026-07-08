@@ -15,8 +15,9 @@ RUN = ROOT / "build"
 SWIM_GIF = ROOT / "source/local-refs/swimfish2.gif"
 CHOMP_STILL_GIF = ROOT / "source/local-refs/chomp-still.gif"
 CHOMP_FULL_GIF = ROOT / "source/local-refs/chomp-full-animation.gif"
+BURP_GIF = ROOT / "source/local-refs/burpfish.gif"
 EXTRA_SHEET = ROOT / "source/local-refs/more-sprites-dopefish.png"
-BUILD_ID = "dopefish-v0.13.0"
+BUILD_ID = "dopefish-v0.14.0"
 
 CELL_WIDTH = 192
 CELL_HEIGHT = 208
@@ -60,8 +61,7 @@ EXTRA_SPRITE_BOXES = {
     "charging": (30, 291, 118, 369),
 }
 BUBBLE_BOXES = {
-    "cyan": (122, 137, 137, 152),
-    "orange": (139, 137, 155, 152),
+    "white": (122, 137, 137, 152),
 }
 
 
@@ -141,8 +141,10 @@ def extract_sheet_sprite(sheet: Image.Image, box: tuple[int, int, int, int]) -> 
 
 
 def extract_bubble(sheet: Image.Image, box: tuple[int, int, int, int]) -> Image.Image:
+    # source bubbles are black orbs with a white rim and shine; clearing the
+    # black interior leaves a hollow, translucent-reading bubble
     sprite = sheet.crop(box)
-    sprite = clear_colors(sprite, BUBBLE_CLEAR_COLORS)
+    sprite = clear_colors(sprite, BUBBLE_CLEAR_COLORS | {BLACK})
     return clear_transparent_rgb(visible_crop(sprite))
 
 
@@ -152,11 +154,12 @@ def make_cell(
     flip: bool = False,
     offset: tuple[int, int] = (0, 0),
     scale: float = SCALE,
+    squash: tuple[float, float] = (1.0, 1.0),
     overlays: list[tuple[Image.Image, tuple[int, int], float]] | None = None,
 ) -> Image.Image:
     sprite = visible_crop(source)
     sprite = sprite.resize(
-        (round(sprite.width * scale), round(sprite.height * scale)),
+        (round(sprite.width * scale * squash[0]), round(sprite.height * scale * squash[1])),
         Image.Resampling.NEAREST,
     )
     if flip:
@@ -191,9 +194,10 @@ def make_left_cell(
     *,
     offset: tuple[int, int] = (0, 0),
     scale: float = SCALE,
+    squash: tuple[float, float] = (1.0, 1.0),
     overlays: list[tuple[Image.Image, tuple[int, int], float]] | None = None,
 ) -> Image.Image:
-    return make_cell(source, flip=True, offset=offset, scale=scale, overlays=overlays)
+    return make_cell(source, flip=True, offset=offset, scale=scale, squash=squash, overlays=overlays)
 
 
 def make_rotated_cell(
@@ -203,6 +207,7 @@ def make_rotated_cell(
     flip: bool = False,
     offset: tuple[int, int] = (0, 0),
     scale: float = 1.8,
+    overlays: list[tuple[Image.Image, tuple[int, int], float]] | None = None,
 ) -> Image.Image:
     sprite = visible_crop(source)
     sprite = sprite.resize(
@@ -223,7 +228,79 @@ def make_rotated_cell(
     left = (CELL_WIDTH - sprite.width) // 2 + offset[0]
     top = (CELL_HEIGHT - sprite.height) // 2 + offset[1]
     cell.alpha_composite(sprite, (left, top))
+    for overlay, position, overlay_scale in overlays or []:
+        overlay_sprite = visible_crop(overlay).resize(
+            (round(overlay.width * overlay_scale), round(overlay.height * overlay_scale)),
+            Image.Resampling.NEAREST,
+        )
+        cell.alpha_composite(overlay_sprite, position)
     return clear_transparent_rgb(cell)
+
+
+GRAYS = {(87, 87, 87, 255), (171, 171, 171, 255)}
+
+
+def make_blink_frame(frame: Image.Image) -> Image.Image:
+    rgba = frame.convert("RGBA")
+    pixels = rgba.load()
+    width, height = rgba.size
+    seen: set[tuple[int, int]] = set()
+    eye_pixels: set[tuple[int, int]] = set()
+
+    for y in range(height):
+        for x in range(width):
+            if (x, y) in seen or pixels[x, y] != WHITE:
+                continue
+            component: list[tuple[int, int]] = []
+            queue: deque[tuple[int, int]] = deque([(x, y)])
+            seen.add((x, y))
+            while queue:
+                cx, cy = queue.popleft()
+                component.append((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if (
+                        0 <= nx < width
+                        and 0 <= ny < height
+                        and (nx, ny) not in seen
+                        and pixels[nx, ny] == WHITE
+                    ):
+                        seen.add((nx, ny))
+                        queue.append((nx, ny))
+            centroid_y = sum(point[1] for point in component) / len(component)
+            # eye whites sit in the top half of the sprite; teeth sit lower
+            if centroid_y < height * 0.6:
+                eye_pixels.update(component)
+
+    if not eye_pixels:
+        raise SystemExit("blink frame: no eye component found in source frame")
+
+    # pull in the gray anti-alias fringe around the eye whites
+    for _ in range(2):
+        fringe = set()
+        for x, y in eye_pixels:
+            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if (
+                    0 <= nx < width
+                    and 0 <= ny < height
+                    and (nx, ny) not in eye_pixels
+                    and pixels[nx, ny] in GRAYS
+                ):
+                    fringe.add((nx, ny))
+        eye_pixels.update(fringe)
+
+    # close each eye column by column: green the opening (whites, grays,
+    # pupil blacks between them), keep the outer ring, and lay the lid as an
+    # arc along the lower opening contour
+    columns: dict[int, list[int]] = {}
+    for x, y in eye_pixels:
+        columns.setdefault(x, []).append(y)
+    for x, ys in columns.items():
+        y_top, y_bot = min(ys), max(ys)
+        for y in range(y_top, y_bot + 1):
+            if pixels[x, y][3]:
+                pixels[x, y] = BODY_GREEN
+        pixels[x, y_bot] = BLACK
+    return rgba
 
 
 def clear_transparent_rgb(image: Image.Image) -> Image.Image:
@@ -309,64 +386,76 @@ def main() -> None:
     swim = load_frames(SWIM_GIF)
     chomp_still = load_frames(CHOMP_STILL_GIF)
     chomp_full = load_frames(CHOMP_FULL_GIF)
-    load_extra_sprites()
-    if len(swim) < 2 or not chomp_still or len(chomp_full) < 8:
-        raise SystemExit("expected swim, still chomp, and full chomp GIF frames")
+    burp = load_frames(BURP_GIF)
+    sheet_sprites, bubbles = load_extra_sprites()
+    if len(swim) < 2 or not chomp_still or len(chomp_full) < 8 or len(burp) < 2:
+        raise SystemExit("expected swim, still chomp, full chomp, and burp GIF frames")
+
+    # body-height continuity: chomp frames at 1.0 must match swim at SCALE
+    swim_height = visible_crop(swim[0]).height * SCALE
+    chomp_height = visible_crop(chomp_full[0]).height
+    if abs(swim_height - chomp_height) > 4:
+        raise SystemExit(
+            f"body height mismatch: swim {swim_height}px vs chomp {chomp_height}px"
+        )
+
+    blink = make_blink_frame(swim[0])
+    burp_blink = make_blink_frame(burp[0])
 
     write_frames(
         "idle",
         [
             make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 2)),
             make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(blink, offset=(0, 0)),
             make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 2)),
         ],
     )
     write_frames(
         "running-right",
         [
             make_left_cell(chomp_full[0], offset=(0, 0), scale=1.0),
-            make_left_cell(chomp_full[1], offset=(0, 1), scale=1.0),
-            make_left_cell(chomp_full[0], offset=(0, 0), scale=1.0),
-            make_left_cell(chomp_full[1], offset=(0, -1), scale=1.0),
+            make_left_cell(chomp_full[1], offset=(0, 2), scale=1.0),
+            make_left_cell(chomp_full[0], offset=(0, 4), scale=1.0),
+            make_left_cell(chomp_full[1], offset=(0, 2), scale=1.0),
             make_left_cell(chomp_full[7], offset=(0, 0), scale=1.0),
-            make_left_cell(chomp_full[1], offset=(0, 1), scale=1.0),
-            make_left_cell(chomp_full[0], offset=(0, 0), scale=1.0),
-            make_left_cell(chomp_full[7], offset=(0, -1), scale=1.0),
+            make_left_cell(chomp_full[1], offset=(0, -2), scale=1.0),
+            make_left_cell(chomp_full[0], offset=(0, -4), scale=1.0),
+            make_left_cell(chomp_full[7], offset=(0, -2), scale=1.0),
         ],
     )
     write_frames(
         "running-left",
         [
             make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 2)),
+            make_left_cell(swim[0], offset=(0, 4)),
+            make_left_cell(swim[1], offset=(0, 2)),
             make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, -1)),
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, -1)),
+            make_left_cell(swim[1], offset=(0, -2)),
+            make_left_cell(swim[0], offset=(0, -4)),
+            make_left_cell(swim[1], offset=(0, -2)),
         ],
     )
     write_frames(
         "waving",
         [
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_cell(burp[0], offset=(0, 0)),
+            make_cell(burp[1], offset=(0, 2)),
+            make_cell(burp[0], offset=(0, 0)),
+            make_cell(burp[1], offset=(0, -2)),
         ],
     )
     write_frames(
         "jumping",
         [
-            make_left_cell(swim[0], offset=(0, 18)),
-            make_left_cell(swim[1], offset=(0, 0)),
+            make_left_cell(swim[0], offset=(0, 18), squash=(1.04, 0.92)),
+            make_left_cell(swim[1], offset=(0, -8)),
             make_left_cell(swim[0], offset=(0, -28)),
-            make_left_cell(swim[1], offset=(0, -10)),
-            make_left_cell(swim[0], offset=(0, 12)),
+            make_left_cell(swim[1], offset=(0, -12), squash=(0.97, 1.06)),
+            make_left_cell(swim[0], offset=(0, 10)),
         ],
     )
     write_frames(
@@ -377,49 +466,71 @@ def main() -> None:
             make_rotated_cell(swim[0], flip=True, angle=-60, offset=(0, 0)),
             make_rotated_cell(swim[1], flip=True, angle=-90, offset=(0, 0)),
             make_rotated_cell(swim[0], flip=True, angle=-120, offset=(0, 0)),
-            make_rotated_cell(swim[1], flip=True, angle=-150, offset=(0, 2)),
-            make_rotated_cell(swim[0], flip=True, angle=-180, offset=(0, 6)),
-            make_rotated_cell(swim[0], flip=True, angle=-180, offset=(0, 10)),
+            make_rotated_cell(
+                swim[1],
+                flip=True,
+                angle=-150,
+                offset=(0, 2),
+                overlays=[(bubbles["white"], (142, 78), 1.5)],
+            ),
+            make_rotated_cell(
+                swim[0],
+                flip=True,
+                angle=-180,
+                offset=(0, 6),
+                overlays=[(bubbles["white"], (148, 46), 2.0)],
+            ),
+            make_rotated_cell(
+                swim[0],
+                flip=True,
+                angle=-180,
+                offset=(0, 10),
+                overlays=[(bubbles["white"], (140, 16), 2.0)],
+            ),
         ],
     )
     write_frames(
         "waiting",
         [
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[0], offset=(0, 2)),
-            make_left_cell(swim[1], offset=(0, 1)),
-            make_left_cell(swim[1], offset=(0, 0)),
-            make_left_cell(swim[0], offset=(0, 1)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[0], offset=(0, 0), overlays=[(bubbles["white"], (10, 116), 1.5)]),
+            make_left_cell(swim[1], offset=(0, 1), overlays=[(bubbles["white"], (14, 100), 1.5)]),
+            make_left_cell(swim[0], offset=(0, 2), overlays=[(bubbles["white"], (4, 82), 2.0)]),
+            make_left_cell(swim[1], offset=(0, 2), overlays=[(bubbles["white"], (10, 64), 2.0)]),
+            make_left_cell(swim[0], offset=(0, 1), overlays=[(bubbles["white"], (4, 46), 1.5)]),
+            make_left_cell(swim[1], offset=(0, 0), overlays=[(bubbles["white"], (10, 28), 1.5)]),
         ],
     )
     write_frames(
         "running",
         [
             make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 2)),
             make_cell(chomp_still[0], offset=(0, 0)),
             make_left_cell(chomp_full[7], offset=(0, 0), scale=1.0),
             make_cell(chomp_still[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_left_cell(swim[1], offset=(0, 2)),
         ],
     )
     write_frames(
         "review",
         [
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
-            make_left_cell(swim[0], offset=(0, 0)),
-            make_left_cell(swim[1], offset=(0, 1)),
+            make_cell(burp[0], offset=(0, 0)),
+            make_cell(burp[0], offset=(0, 1)),
+            make_cell(burp[0], offset=(0, 2)),
+            make_cell(burp_blink, offset=(0, 2)),
+            make_cell(burp[0], offset=(0, 1)),
+            make_cell(burp[0], offset=(0, 0)),
         ],
     )
 
     allowed_palette = {
         tuple(color)
-        for color in collect_visible_palette([SWIM_GIF, CHOMP_STILL_GIF, CHOMP_FULL_GIF])
+        for color in collect_visible_palette(
+            [SWIM_GIF, CHOMP_STILL_GIF, CHOMP_FULL_GIF, BURP_GIF]
+        )
     }
+    for sprite in list(sheet_sprites.values()) + list(bubbles.values()):
+        allowed_palette.update(visible_colors(sprite))
     assert_palette(RUN / "frames", allowed_palette)
 
     manifest = {
@@ -428,6 +539,7 @@ def main() -> None:
             str(SWIM_GIF),
             str(CHOMP_STILL_GIF),
             str(CHOMP_FULL_GIF),
+            str(BURP_GIF),
             str(EXTRA_SHEET),
         ],
         "scale": SCALE,
@@ -453,6 +565,7 @@ def main() -> None:
             str(SWIM_GIF),
             str(CHOMP_STILL_GIF),
             str(CHOMP_FULL_GIF),
+            str(BURP_GIF),
             str(EXTRA_SHEET),
         ],
         "atlas": {

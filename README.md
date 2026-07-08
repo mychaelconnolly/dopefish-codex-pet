@@ -12,7 +12,7 @@ Use the published package from `mychaelconnolly/dopefish-codex-pet`:
 [Install Dopefish in Codex](codex://pets/install?name=Dopefish&imageUrl=https%3A%2F%2Fraw.githubusercontent.com%2Fmychaelconnolly%2Fdopefish-codex-pet%2Fmain%2Fpets%2Fdopefish%2Fspritesheet.webp&description=The%20second-dumbest%20creature%20in%20the%20universe)
 
 Manual install from this checkout, useful while testing the local
-`dopefish-v0.13.0` build:
+`dopefish-v0.14.0` build:
 
 ```bash
 mkdir -p "$HOME/.codex/pets/dopefish"
@@ -38,9 +38,19 @@ Project details:
   `imageUrl`, and optional `description` parameters.
 - Supports local manual install through the Codex home pet directory.
 - Keeps the source-pixel style: nearest-neighbor scaling and hard sprite edges.
-- Includes the chomp-heavy `dopefish-v0.13.0` build: `running-right` is
-  repurposed as an 8-frame left-facing chomp row, while `running` holds the
-  chomp for three frames.
+- Includes the `dopefish-v0.14.0` build with per-state animation identity:
+  - `idle`: calm swim with a rare eye blink (frame 3).
+  - `running-right`: the 8-frame left-facing chomp row from v0.13, now with a
+    sine bob.
+  - `running-left`: swim cycle with a full-amplitude sine bob.
+  - `waving`: front-facing greeting using the burpfish frames.
+  - `jumping`: squash-crouch, rise, apex, stretch-fall, settle arc.
+  - `failed`: belly-up tumble and sink, with a burp bubble rising on the
+    final frames.
+  - `waiting`: swim with a bubble rising from the mouth. Bubbles use the
+    original sheet's white rim-and-shine art with a transparent interior.
+  - `running`: swim into a held chomp (unchanged from v0.13) with a gentle bob.
+  - `review`: front-facing stare at the user with a slow blink.
 - Includes QA artifacts for review: `docs/contact-sheet.png` and
   `docs/previews/*.gif`.
 
@@ -73,13 +83,13 @@ format: WebP with transparency
 Current build:
 
 ```text
-dopefish-v0.13.0
+dopefish-v0.14.0
 ```
 
 Current `spritesheet.webp` SHA-256:
 
 ```text
-4196b447fa46da64e9c45eb1a736f571c1206b1147e644aaddbef595fc25e337
+85ba1051f742854e4075ac9060362f216adae938fcf42c9cb664807ebf7aa8ce
 ```
 
 ## Process Notes
