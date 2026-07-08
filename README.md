@@ -3,7 +3,7 @@
 The second-dumbest creature in the universe can now be your Codex pet. Made with
 love. Suggestions welcome.
 
-![Dopefish v0.13.0 thumbnail](docs/thumbnail.png)
+![Dopefish hero reel: idle blink, chomp, burp, belly-up tumble](docs/hero.gif)
 
 ## Install
 
@@ -53,6 +53,8 @@ Project details:
   - `review`: front-facing stare at the user with a slow blink.
 - Includes QA artifacts for review: `docs/contact-sheet.png` and
   `docs/previews/*.gif`.
+- Includes a README hero reel generator: `scripts/make_hero_gif.py` renders
+  `docs/hero.gif` from `build/frames/` (run the build first).
 
 OpenAI documentation:
 
